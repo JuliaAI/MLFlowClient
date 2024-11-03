@@ -11,7 +11,8 @@ Default is `false`, using the REST API endpoint.
 
 # Constructors
 
-- `MLFlow(apiroot; apiversion=2.0,headers=Dict())`
+- `MLFlow(apiroot; user, password, apiversion=2.0, headers=Dict())` - this constructor will check env 
+variables `MLFLOW_TRACKING_USERNAME` and `MLFLOW_TRACKING_PASSWORD` for credentials.
 - `MLFlow()` - defaults to `MLFlow(ENV["MLFLOW_TRACKING_URI"])` or `MLFlow("http://localhost:5000/api")`
 
 # Examples
@@ -31,7 +32,21 @@ struct MLFlow
     apiversion::Union{Integer, AbstractFloat}
     headers::Dict
 end
-MLFlow(apiroot; apiversion=2.0, headers=Dict()) = MLFlow(apiroot, apiversion, headers)
+
+function MLFlow(
+    apiroot;
+    user=get(ENV, "MLFLOW_TRACKING_USERNAME", missing), 
+    password=get(ENV, "MLFLOW_TRACKING_PASSWORD", missing), 
+    apiversion=2.0, 
+    headers=Dict()
+    )
+    if !ismissing(user) && !ismissing(password)
+        token = base64encode("$(user):$(password)")
+        headers["Authorization"] = "Basic $(token)"
+    end
+    return MLFlow(apiroot, apiversion, headers)
+end
+
 function MLFlow()
     apiroot = "http://localhost:5000/api"
     if haskey(ENV, "MLFLOW_TRACKING_URI")
